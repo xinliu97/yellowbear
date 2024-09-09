@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/../yellow-bear.iml" filepath="$PROJECT_DIR$/../yellow-bear.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/yellowbear.iml" filepath="$PROJECT_DIR$/.idea/yellowbear.iml" />
     </modules>
   </component>
 </project>
