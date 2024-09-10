@@ -1,0 +1,13 @@
+{
+    "question": "你知道的NBA球员有哪些?",
+    "attributes": ["name"],
+    "primary_attr": "name",
+    "candidates": [
+        {
+            "name": "LeBron James"
+        }, 
+        {
+            "name": "Karie Irvine"
+        }
+    ]
+}

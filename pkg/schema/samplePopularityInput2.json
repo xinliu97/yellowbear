@@ -1,0 +1,15 @@
+{
+    "question": "你知道的大学有哪些?",
+    "attributes": ["name", "location"],
+    "primary_attr": "name",
+    "candidates": [
+        {
+            "name": "东北大学",
+            "location": "沈阳"
+        }, 
+        {
+            "name": "清华大学",
+            "location": "北京"
+        }
+    ]
+}

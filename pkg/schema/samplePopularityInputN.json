@@ -1,0 +1,31 @@
+{
+    "question": "你知道的运动员有哪些?",
+    "attributes": ["name", "field", "gender", "nationality", "education", "honors"],
+    "primary_attr": "name",
+    "candidates": [
+        {
+            "name": "Karie Irvine",
+            "field": "Basketball",
+            "gender": "male", 
+            "nationality": "USA", 
+            "education": "idk", 
+            "honors": "go check wiki and leave me alone"
+        },
+        {
+            "name": "张镇麟",
+            "field": "篮球",
+            "gender": "不懂", 
+            "nationality": "中国", 
+            "education": "妈妈教的", 
+            "honors": "嚣张跋扈第一名; '你他吗敢瞅我'创始人"
+        },
+        {
+            "name": "别青峰",
+            "field": "篮球;健身",
+            "gender": "maniac", 
+            "nationality": "中国", 
+            "education": "NEU", 
+            "honors": "Too many to count"
+        }
+    ]
+}
