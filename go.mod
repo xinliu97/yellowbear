@@ -3,9 +3,7 @@ module yellowbear
 go 1.22.0
 
 require (
-	github.com/elliotchance/orderedmap/v2 v2.4.0
 	github.com/gin-gonic/gin v1.10.0
-	github.com/google/wire v0.6.0
 	go.mongodb.org/mongo-driver v1.16.1
 )
 
