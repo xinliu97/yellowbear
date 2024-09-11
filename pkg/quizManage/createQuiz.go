@@ -1,4 +1,4 @@
-package quizmanage
+package quizManage
 
 import (
 	"context"

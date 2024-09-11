@@ -5,42 +5,37 @@ import (
 	"yellowbear/pkg"
 	"yellowbear/pkg/quizManage"
 	// "context"
-	// "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 	// "go.mongodb.org/mongo-driver/mongo"
 	"fmt"
-	// "yellowbear/pkg/api"
+	"yellowbear/pkg/api"
 )
 
 
 
 func main() {
-	/* 
-		creat a mongodb client and connect to mongo instance 
+	/*
+	 	create 3 popularity-type quizzes from json files into mongodb
 	*/
-	// identify mongodb server instance
-	// create a client
 	mc, err := pkg.NewMongoDBClient()
 	if err != nil {
 		fmt.Println("[Disconnect] Failed to connect to mongodb client.", err)
 	}
 	defer mc.Disconnect()
 
-	quizmanage.CreatePopularity(mc, "/root/yellowbear/pkg/schema/samplePopularityInput1.json")
-	quizmanage.CreatePopularity(mc, "/root/yellowbear/pkg/schema/samplePopularityInput2.json")
-	quizmanage.CreatePopularity(mc, "/root/yellowbear/pkg/schema/samplePopularityInputN.json")
-	
-	
-	// /*
-	// 	handle requests
-	// */
-	// //create router
-	// router := gin.Default()
-	// // respond to http requests
-	// router.POST("/quiz/admin", api.HdlInputs(client))
-	// router.POST("/quiz/admin/", api.HdlInputs(client))
-	// // router.POST("/quiz/admin/result", api.DisplayResult(client))
-	// // start to listen
-	// router.Run()
+	quizManage.CreatePopularity(mc, "/root/yellowbear/pkg/schema/samplePopularityInput1.json")
+	quizManage.CreatePopularity(mc, "/root/yellowbear/pkg/schema/samplePopularityInput2.json")
+	quizManage.CreatePopularity(mc, "/root/yellowbear/pkg/schema/samplePopularityInputN.json")
+
+	/*
+		handle requests
+	*/
+	//create router
+	router := gin.Default()
+	// respond to http requests
+	router.GET("quiz/all", api.ListAllQuizzes(mc))
+	// start to listen
+	router.Run()
 }
 
 
