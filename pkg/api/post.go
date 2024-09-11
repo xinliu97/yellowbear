@@ -1,132 +1,176 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
-	"net/http"
-	"encoding/json"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 	"context"
 	"fmt"
+	"net/http"
+	"sort"
+	"yellowbear/pkg"
+	"yellowbear/pkg/schema"
+	"yellowbear/pkg/utils"
+
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type submittedNames struct {
+type rcvdAnswers struct {
+	QuizID string `json:"_id" binding:"required"`
 	Names []string `json:"names" binding:"required"`
 }
 
-type answer struct {
-	Name string `json:"name" binding:"required"`
+func getDocByStringID(strID string, coll *mongo.Collection, tarDoc interface{}) error {
+	objectID, err := primitive.ObjectIDFromHex(strID)
+	if err != nil {
+		fmt.Println("[getDocByStringID]", err)
+		return err
+	}
+
+	filter := bson.D{{Key: "_id", Value: objectID}}
+	err = coll.FindOne(context.TODO(), filter).Decode(tarDoc)
+	if err != nil {
+		fmt.Println("[getDocByStringID]", err)
+		return err
+	}
+	return nil
+}  // TODO return cursor to avoid multiple Finds
+
+
+
+func recordVotes(rcvd rcvdAnswers, coll *mongo.Collection) error {
+	var quiz schema.PopularityCollRead
+	err := getDocByStringID(rcvd.QuizID, coll, &quiz)
+	if err != nil {
+		fmt.Println("[recordVotes]", err)
+		return err
+	}
+	
+	for _, name := range rcvd.Names {
+		if _, exists := quiz.VoteCount[name]; exists {
+			quiz.VoteCount[name] ++
+		}
+	}
+
+	// write to db
+	objId, err := primitive.ObjectIDFromHex(rcvd.QuizID)
+	if err != nil {
+		fmt.Println("[recordVotes]", err)
+		return err
+	}
+	filter := bson.D{{Key: "_id", Value: objId}}
+	content := bson.D{{Key: "vote_count", Value: quiz.VoteCount}}
+	updateResult, err := utils.MongoUpdate(coll, filter, content)
+	if err != nil {
+		fmt.Println("[recordVotes]", err)
+		return err
+	}
+	fmt.Println("[recordVotes]", updateResult)
+
+	return nil
 }
 
-func HdlInputs(client *mongo.Client) gin.HandlerFunc {
-	fmt.Println("entered HdlInputs.")
-    return func(c *gin.Context){
-		var rcvdjson answer
-		// bind JSON and check binding requirement
-		if err := c.ShouldBindJSON(&rcvdjson); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
+func addParticipantCnt(rcvd rcvdAnswers, coll *mongo.Collection) error {  
+	var quiz schema.PopularityCollRead
+	err := getDocByStringID(rcvd.QuizID, coll, &quiz)
+	if err != nil {
+		fmt.Println("[recordVotes]", err)
+		return err
+	}
+
+	objId, err := primitive.ObjectIDFromHex(rcvd.QuizID)
+	if err != nil {
+		fmt.Println("[recordVotes]", err)
+		return err
+	}
+	filter := bson.D{{Key: "_id", Value: objId}}
+	content := bson.D{{Key: "participant_cnt", Value: quiz.ParticipantCnt+1}}
+	updateResult, err := utils.MongoUpdate(coll, filter, content)
+	if err != nil {
+		fmt.Println("[recordVotes]", err)
+		return err
+	}
+	fmt.Println("[recordVotes]", updateResult)
+
+	return nil
+}
+
+func countVoteRate(vc int, total int) float32 {
+	return float32(vc) / float32(total)
+}
+
+type rate struct{
+	Name string `json:"name"`
+	VoteRate float32 `json:"vote_rate"`
+}
+
+type ByRate []rate
+
+func (a ByRate) Len() int {
+	return len(a)
+}
+
+func (a ByRate) Less(i, j int) bool {
+	return a[i].VoteRate > a[j].VoteRate  // from large to small
+}
+
+func (a ByRate) Swap(i, j int) {
+	a[i].Name, a[j].Name = a[j].Name, a[i].Name
+	a[i].VoteRate, a[j].VoteRate = a[j].VoteRate, a[i].VoteRate
+}
+
+func sortVotes(rcvd rcvdAnswers, coll *mongo.Collection) ([]rate, error) {
+	var quiz schema.PopularityCollRead
+	err := getDocByStringID(rcvd.QuizID, coll, &quiz)
+	if err != nil {
+		fmt.Println("[recordVotes]", err)
+		return nil, err
+	}
+
+	var rankedRate []rate
+
+	for name, vc := range quiz.VoteCount {
+		r := rate{
+			Name: name,
+			VoteRate: countVoteRate(vc, quiz.ParticipantCnt),
 		}
+		rankedRate = append(rankedRate, r)
+	}
 	
-		// assign db name
-		dbName := "yellowbear"
-		// assign collection
-		institutionsColl := client.Database(dbName).Collection("institutions")
-	
-		// assign search condition
-		filter := bson.M{"name": rcvdjson.Name}
-		// search by condition
-		var searchResult bson.M  // TODO 这里如果改成Institution, 仍然能查到, 但是返回的doc其字段均为空值(除了filter指定的字段)
-		err := institutionsColl.FindOne(context.TODO(), filter).Decode(&searchResult)
-		if err != nil {
-			if err == mongo.ErrNoDocuments {
-				fmt.Printf("No document was found with the title %s\n", rcvdjson.Name)
-				c.JSON(http.StatusNotFound, gin.H{"error": "No document found"})
-				return
-			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
-            return
-		}
-		// add vote count
-		update := bson.D{{Key: "$set", Value: bson.D{{Key: "voteCount", Value: searchResult["voteCount"].(int32)+1}}}}
-		updateResult, err := institutionsColl.UpdateOne(context.TODO(), filter, update)
-		if err != nil {
+	sort.Sort(ByRate(rankedRate))
+	return rankedRate, nil
+}
+
+func HandleAnswers(mc *pkg.MongoDBClient) gin.HandlerFunc {
+	return func(c *gin.Context){
+		var rcvd rcvdAnswers
+		err := utils.ReadPostBody(c, &rcvd)
+		if err!=nil {
+			fmt.Println("[handleAnswers]", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update vote."})
-			return
 		}
-		fmt.Printf("update coll: %+v\n", updateResult)
-		// encode searchResult bson into json and output it
-		searchResult["voteCount"] = searchResult["voteCount"].(int32)+1
-		responseJson, err := json.MarshalIndent(searchResult, "", "    ")
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encode data"})
-			return
-		}
-		fmt.Printf("Received POST request, response: %s\n", responseJson)
 	
-		// OK response
-		c.Header("Content-Type", "application/json")
-		c.Data(http.StatusOK, "application/json", responseJson)
+		coll := mc.GetCollection("yellowbear", "quizzes")
+
+		err = addParticipantCnt(rcvd, coll)
+		if err!=nil {
+			fmt.Println("[handleAnswers]", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update vote."})
+		}
+	
+		err = recordVotes(rcvd, coll)
+		if err!=nil {
+			fmt.Println("[handleAnswers]", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update vote."})
+		}
+
+		rankedVoteRate, err := sortVotes(rcvd, coll)
+		if err!=nil {
+			fmt.Println("[handleAnswers]", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update vote."})
+		}
+		fmt.Println("[HandleAnswers]", rankedVoteRate)
+		
+		utils.RespOkWithBody(c, rankedVoteRate)
 	}
 }
-
-// func DisplayResult(client *mongo.Client) gin.HandlerFunc {
-// 	fmt.Println("entered DisplayResult.")
-// 	return func(c *gin.Context){
-// 		var rcvdjson submittedNames
-// 		// bind JSON and check binding requirement
-// 		if err := c.ShouldBindJSON(&rcvdjson); err != nil {
-// 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-// 			return
-// 		}
-	
-// 		// assign names
-// 		dbName := "yellowbear"
-// 		collName := "institutions"
-// 		// assign collection
-// 		coll := client.Database(dbName).Collection(collName)
-// 		// sort
-// 		instToRank, err := sortVotes(coll)
-// 		// construct 1st part
-// 		wholeRank := 0
-// 		// construct 2st part
-
-
-
-
-// 		// assign search condition
-// 		filter := bson.M{"name": rcvdjson.Name}
-// 		// search by condition
-// 		var searchResult bson.M  // TODO 这里如果改成Institution, 仍然能查到, 但是返回的doc其字段均为空值(除了filter指定的字段)
-// 		err := coll.FindOne(context.TODO(), filter).Decode(&searchResult)
-// 		if err != nil {
-// 			if err == mongo.ErrNoDocuments {
-// 				fmt.Printf("No document was found with the title %s\n", rcvdjson.Name)
-// 				c.JSON(http.StatusNotFound, gin.H{"error": "No document found"})
-// 				return
-// 			}
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
-//             return
-// 		}
-// 		// add vote count
-// 		update := bson.D{{Key: "$set", Value: bson.D{{Key: "voteCount", Value: searchResult["voteCount"].(int32)+1}}}}
-// 		updateResult, err := coll.UpdateOne(context.TODO(), filter, update)
-// 		if err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update vote."})
-// 			return
-// 		}
-// 		fmt.Printf("update coll: %+v\n", updateResult)
-// 		// encode searchResult bson into json and output it
-// 		searchResult["voteCount"] = searchResult["voteCount"].(int32)+1
-// 		responseJson, err := json.MarshalIndent(searchResult, "", "    ")
-// 		if err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encode data"})
-// 			return
-// 		}
-// 		fmt.Printf("Received POST request, response: %s\n", responseJson)
-	
-// 		// OK response
-// 		c.Header("Content-Type", "application/json")
-// 		c.Data(http.StatusOK, "application/json", responseJson)
-// 	}
-// }

@@ -11,6 +11,11 @@ import (
 	"yellowbear/pkg/api"
 )
 
+func create3SamplePopularityQuizzes(mc *pkg.MongoDBClient) {
+	quizManage.CreatePopularity(mc, "/root/yellowbear/pkg/schema/samplePopularityInput1.json")
+	quizManage.CreatePopularity(mc, "/root/yellowbear/pkg/schema/samplePopularityInput2.json")
+	quizManage.CreatePopularity(mc, "/root/yellowbear/pkg/schema/samplePopularityInputN.json")
+}
 
 
 func main() {
@@ -23,9 +28,7 @@ func main() {
 	}
 	defer mc.Disconnect()
 
-	quizManage.CreatePopularity(mc, "/root/yellowbear/pkg/schema/samplePopularityInput1.json")
-	quizManage.CreatePopularity(mc, "/root/yellowbear/pkg/schema/samplePopularityInput2.json")
-	quizManage.CreatePopularity(mc, "/root/yellowbear/pkg/schema/samplePopularityInputN.json")
+	// create3SamplePopularityQuizzes(mc)
 
 	/*
 		handle requests
@@ -34,6 +37,7 @@ func main() {
 	router := gin.Default()
 	// respond to http requests
 	router.GET("quiz/all", api.ListAllQuizzes(mc))
+	router.POST("quiz/submit", api.HandleAnswers(mc))
 	// start to listen
 	router.Run()
 }

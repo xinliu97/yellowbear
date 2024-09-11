@@ -10,7 +10,7 @@ type PopularityColl struct {
 	Attributes []string `bson:"attributes"`
 	PrimaryAttr string `bson:"primary_attr"`
 	Candidates []map[string]string `bson:"candidates"`
-	ParticipantCnt int `bson:"participantcnt"`
+	ParticipantCnt int `bson:"participant_cnt"`
 	VoteCount map[string]int `bson:"vote_count"`  // PrimaryAttr: vote count number
 }
 
@@ -20,7 +20,7 @@ type PopularityCollRead struct {
 	Attributes []string `bson:"attributes"`
 	PrimaryAttr string `bson:"primary_attr"`
 	Candidates []map[string]string `bson:"candidates"`
-	ParticipantCnt int `bson:"participantcnt"`
+	ParticipantCnt int `bson:"participant_cnt"`
 	VoteCount map[string]int `bson:"vote_count"`  // PrimaryAttr: vote count number
 }
 
