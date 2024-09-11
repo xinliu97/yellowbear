@@ -27,3 +27,6 @@ pyscripts/
 
 # data file
 rawdata/
+
+# idea settings
+.idea/
