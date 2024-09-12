@@ -16,8 +16,8 @@ import (
 )
 
 type rcvdAnswers struct {
-	QuizID string `json:"_id" binding:"required"`
-	Names []string `json:"names" binding:"required"`
+	QuizID string   `json:"_id" binding:"required"`
+	Names  []string `json:"names" binding:"required"`
 }
 
 func getDocByStringID(strID string, coll *mongo.Collection, tarDoc interface{}) error {
@@ -34,9 +34,7 @@ func getDocByStringID(strID string, coll *mongo.Collection, tarDoc interface{}) 
 		return err
 	}
 	return nil
-}  // TODO return cursor to avoid multiple Finds
-
-
+} // TODO return cursor to avoid multiple Finds
 
 func recordVotes(rcvd rcvdAnswers, coll *mongo.Collection) error {
 	var quiz schema.PopularityCollRead
@@ -45,10 +43,10 @@ func recordVotes(rcvd rcvdAnswers, coll *mongo.Collection) error {
 		fmt.Println("[recordVotes]", err)
 		return err
 	}
-	
+
 	for _, name := range rcvd.Names {
 		if _, exists := quiz.VoteCount[name]; exists {
-			quiz.VoteCount[name] ++
+			quiz.VoteCount[name]++
 		}
 	}
 
@@ -70,7 +68,7 @@ func recordVotes(rcvd rcvdAnswers, coll *mongo.Collection) error {
 	return nil
 }
 
-func addParticipantCnt(rcvd rcvdAnswers, coll *mongo.Collection) error {  
+func addParticipantCnt(rcvd rcvdAnswers, coll *mongo.Collection) error {
 	var quiz schema.PopularityCollRead
 	err := getDocByStringID(rcvd.QuizID, coll, &quiz)
 	if err != nil {
@@ -84,7 +82,7 @@ func addParticipantCnt(rcvd rcvdAnswers, coll *mongo.Collection) error {
 		return err
 	}
 	filter := bson.D{{Key: "_id", Value: objId}}
-	content := bson.D{{Key: "participant_cnt", Value: quiz.ParticipantCnt+1}}
+	content := bson.D{{Key: "participant_cnt", Value: quiz.ParticipantCnt + 1}}
 	updateResult, err := utils.MongoUpdate(coll, filter, content)
 	if err != nil {
 		fmt.Println("[recordVotes]", err)
@@ -99,8 +97,8 @@ func countVoteRate(vc int, total int) float32 {
 	return float32(vc) / float32(total)
 }
 
-type rate struct{
-	Name string `json:"name"`
+type rate struct {
+	Name     string  `json:"name"`
 	VoteRate float32 `json:"vote_rate"`
 }
 
@@ -111,7 +109,7 @@ func (a ByRate) Len() int {
 }
 
 func (a ByRate) Less(i, j int) bool {
-	return a[i].VoteRate > a[j].VoteRate  // from large to small
+	return a[i].VoteRate > a[j].VoteRate // from large to small
 }
 
 func (a ByRate) Swap(i, j int) {
@@ -131,46 +129,50 @@ func sortVotes(rcvd rcvdAnswers, coll *mongo.Collection) ([]rate, error) {
 
 	for name, vc := range quiz.VoteCount {
 		r := rate{
-			Name: name,
+			Name:     name,
 			VoteRate: countVoteRate(vc, quiz.ParticipantCnt),
 		}
 		rankedRate = append(rankedRate, r)
 	}
-	
+
 	sort.Sort(ByRate(rankedRate))
 	return rankedRate, nil
 }
 
 func HandleAnswers(mc *pkg.MongoDBClient) gin.HandlerFunc {
-	return func(c *gin.Context){
+	return func(c *gin.Context) {
 		var rcvd rcvdAnswers
 		err := utils.ReadPostBody(c, &rcvd)
-		if err!=nil {
+		if err != nil {
 			fmt.Println("[handleAnswers]", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update vote."})
 		}
-	
+
 		coll := mc.GetCollection("yellowbear", "quizzes")
 
 		err = addParticipantCnt(rcvd, coll)
-		if err!=nil {
+		if err != nil {
 			fmt.Println("[handleAnswers]", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update vote."})
 		}
-	
+
 		err = recordVotes(rcvd, coll)
-		if err!=nil {
+		if err != nil {
 			fmt.Println("[handleAnswers]", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update vote."})
 		}
 
 		rankedVoteRate, err := sortVotes(rcvd, coll)
-		if err!=nil {
+		if err != nil {
 			fmt.Println("[handleAnswers]", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update vote."})
 		}
 		fmt.Println("[HandleAnswers]", rankedVoteRate)
-		
-		utils.RespOkWithBody(c, rankedVoteRate)
+
+		err = utils.RespOkWithBody(c, rankedVoteRate)
+		if err != nil {
+			fmt.Println("[HandleAnswers]", err)
+			return
+		}
 	}
 }

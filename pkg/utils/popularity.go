@@ -1,10 +1,10 @@
 package utils
 
 import (
-	"os"
+	"encoding/json"
 	"fmt"
 	"io"
-	"encoding/json"
+	"os"
 	"yellowbear/pkg/schema"
 )
 
@@ -17,32 +17,19 @@ func ReadPopularityCreationJson(filePath string, pc *schema.PopularityCreation) 
 	defer file.Close()
 
 	rawJson, err := io.ReadAll(file)
-    if err != nil {
-        fmt.Println("[CreatePopularity] Failed to read json file.", err)
+	if err != nil {
+		fmt.Println("[CreatePopularity] Failed to read json file.", err)
 		return err
-    }
+	}
 
 	err = json.Unmarshal(rawJson, pc)
 	if err != nil {
-        fmt.Println("[CreatePopularity] Failed to read json file.", err)
+		fmt.Println("[CreatePopularity] Failed to read json file.", err)
 		return err
-    }
+	}
 
 	return nil
 }
-
-// func getFieldByName(s interface{}, fieldName string) interface{} {
-//     v := reflect.ValueOf(s)
-
-//     if v.Kind() == reflect.Struct {
-//         field := v.FieldByName(fieldName)
-//         if field.IsValid() && field.CanInterface() {
-//             return field.Interface()
-//         }
-//     }
-
-//     return nil
-// }
 
 func getCandidatePrimaryAttrValue(candidate map[string]string, popColl *schema.PopularityColl) string {
 	return candidate[popColl.PrimaryAttr]
@@ -63,5 +50,9 @@ func ConstructPopularityCollection(pc schema.PopularityCreation, popColl *schema
 	popColl.PrimaryAttr = pc.PrimaryAttr
 	popColl.Candidates = pc.Candidates
 	popColl.ParticipantCnt = 0
-	initVoteCnt(popColl)
+	err := initVoteCnt(popColl)
+	if err != nil {
+		fmt.Println("[ConstructPopularityCollection]", err)
+		return
+	}
 }
