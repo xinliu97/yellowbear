@@ -1,4 +1,4 @@
-package pkg
+package utils
 
 import (
 	"context"
@@ -7,16 +7,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const (
-	mongodUri = "mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.3.0"
-)
-
 type MongoDBClient struct {
 	Client *mongo.Client
 }
 
-func NewMongoDBClient() (*MongoDBClient, error) {
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(mongodUri))
+func NewMongoDBClient(uri string) (*MongoDBClient, error) {
+	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(uri))
 	if err != nil {
 		return nil, err
 	}

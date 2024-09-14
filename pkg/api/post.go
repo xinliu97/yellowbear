@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
-	"yellowbear/pkg"
 	"yellowbear/pkg/schema"
 	"yellowbear/pkg/utils"
 
@@ -139,7 +138,7 @@ func sortVotes(rcvd rcvdAnswers, coll *mongo.Collection) ([]rate, error) {
 	return rankedRate, nil
 }
 
-func HandleAnswers(mc *pkg.MongoDBClient) gin.HandlerFunc {
+func HandleAnswers(mc *utils.MongoDBClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var rcvd rcvdAnswers
 		err := utils.ReadPostBody(c, &rcvd)

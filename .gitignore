@@ -30,3 +30,5 @@ rawdata/
 
 # idea settings
 .idea/
+
+config.yaml

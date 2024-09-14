@@ -8,7 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"sort"
 
-	"yellowbear/pkg"
 	"yellowbear/pkg/schema"
 	"yellowbear/pkg/utils"
 )
@@ -19,7 +18,7 @@ const (
 	collName    = "quizzes"
 )
 
-func ListAllQuizzes(mc *pkg.MongoDBClient) gin.HandlerFunc {
+func ListAllQuizzes(mc *utils.MongoDBClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		coll := mc.GetCollection(dbName, collName)
 		emptyFilter := bson.D{{}}
@@ -80,7 +79,7 @@ func (a ByHeat) Swap(i, j int) {
 	a[i].Heat, a[j].Heat = a[j].Heat, a[i].Heat
 }
 
-func QuizzesInHeatOrder(mc *pkg.MongoDBClient) gin.HandlerFunc {
+func QuizzesInHeatOrder(mc *utils.MongoDBClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		coll := mc.GetCollection(dbName, collName)
 		emptyFilter := bson.D{{}}
