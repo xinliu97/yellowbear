@@ -32,3 +32,5 @@ rawdata/
 .idea/
 
 config.yaml
+
+*.out
